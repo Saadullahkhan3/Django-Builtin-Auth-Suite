@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}Dj Builtin Auth Suite{% endblock %}
+
+{% block body %}
+    {{ block.super }}
+   
+    <div class="container mt-5">
+        <div class="row justify-content-center align-items-center">
+            <div class="col-md-8">
+                <h1 class="text-center mb-4">All Users</h1>
+                {% for u in object_list %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ u.get_full_name|default:"No Name Provided" }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@{{ u.username }}</h6>
+                            <p class="card-text">{{ u.bio|default:"This user has not provided a bio."|truncatewords:30 }}</p>
+                            <a href="{% url 'user_profile' u.username %}" class="btn btn-primary">View Profile</a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-center">No users found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

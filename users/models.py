@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.contrib.auth.hashers import make_password
 from django.contrib import auth
 from django.utils import timezone
 from django.core.mail import send_mail
@@ -21,7 +20,10 @@ class UserManager(BaseUserManager):
         
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
-        user.password = make_password(password)
+        if password is None:
+            user.set_unusable_password()
+        else:
+            user.set_password(password)  # correct hashing
         user.save(using=self._db)
         return user
 
@@ -72,13 +74,6 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """
-    An abstract base class implementing a fully featured User model with
-    admin-compliant permissions.
-
-    Username and password are required. Other fields are optional.
-    """
-
     username_validator = UsernameValidator()
 
     username = models.CharField(
@@ -135,7 +130,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     EMAIL_FIELD = "email"
     # USERNAME_FIELD = "username"
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ["username"]
 
     class Meta:
         verbose_name = _("user")
@@ -144,6 +139,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     def clean(self):
         super().clean()
         self.email = self.__class__.objects.normalize_email(self.email)
+        if self.email:
+            self.email = self.email.lower()
 
     def get_full_name(self):
         """
@@ -160,6 +157,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         """Send an email to this user."""
         send_mail(subject, message, from_email, [self.email], **kwargs)
 
-
+    def save(self, *args, **kwargs):
+        # Call full_clean() to run model validation, including the clean() method.
+        self.full_clean()
+        super().save(*args, **kwargs)
+        
     def __str__(self):
         return self.username
